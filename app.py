@@ -1,47 +1,35 @@
-from flask import Flask
+import streamlit as st
+import pandas as pd
 import mysql.connector
+import altair as alt
 
-app = Flask(__name__)
+db_config = {
+    'host': 'localhost',
+    'user': 'streamlit',
+    'password': 'salasana',
+    'database': 'motivaatio'
+}
 
-@app.route('/')
-def home():
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="exampleuser",
-        password="change_this_strong_password",
-        database="exampledb"
-    )
-    cursor = conn.cursor()
-    cursor.execute("SELECT NOW()")  
-    result = cursor.fetchone()
-    cursor.close()
+def load_data():
+    conn = mysql.connector.connect(**db_config)
+    query = "SELECT student_name AS Opiskelija, month AS Kuukausi, motivation_perc AS `Moti%` FROM moti_data;"
+    df = pd.read_sql(query, conn)
     conn.close()
+    return df
 
-    return f"""
-    <html>
-        <head>
-            <title>LEMP App</title>
-            <style>
-                body {{
-                    background-color: black;
-                    color: red;
-                    font-family: 'Courier New', monospace;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
-                    margin: 0;
-                }}
-                .clock {{
-                    font-size: 80px;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="clock">{result[0]}</div>
-        </body>
-    </html>
-    """
+st.title("Onni Opiskelijan moti 2025")
+st.write("huomaa linux-kurssin vaikutus loppuvuonna")
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+data = load_data()
+st.dataframe(data)
+
+
+chart = alt.Chart(data).mark_line(point=alt.OverlayMarkDef(size=150, filled=True), color='red').encode(
+    x='Kuukausi',
+    y='Moti%',
+    tooltip=['Kuukausi', 'Moti%']
+).properties(
+    title='Motivaatio 2025'
+)
+
+st.altair_chart(chart, use_container_width=True)
